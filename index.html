@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルブラウザガチャ</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 40px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .input-group input[type="number"] {
+            width: 40%;
+        }
+
+        .input-group button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .result-container {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>シンプルブラウザガチャ</h1>
+    <div class="container">
+    <form id="pair-form">
+        <!-- 数値と文字列の入力欄を動的に生成 -->
+        <div id="input-container">
+            <div class="input-group">
+                <input type="number" placeholder="数値">
+                <input type="text" placeholder="文字列">
+            </div>
+            <div class="input-group">
+                <input type="number" placeholder="数値">
+                <input type="text" placeholder="文字列">
+            </div>
+            <div class="input-group">
+                <input type="number" placeholder="数値">
+                <input type="text" placeholder="文字列">
+            </div>
+            <div class="input-group">
+                <input type="number" placeholder="数値">
+                <input type="text" placeholder="文字列">
+            </div>
+            <div class="input-group">
+                <input type="number" placeholder="数値">
+                <input type="text" placeholder="文字列">
+            </div>
+        </div>
+        <button type="button" onclick="addInput()">入力欄を追加</button>
+        <br>
+        <br>
+        <button type="button" onclick="exportCSV()">CSVエクスポート</button>
+        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        <button type="button" onclick="importCSV()">CSVインポート</button>
+        <br>
+        <br>
+        <button type="button" onclick="sampleMultipleTimes()">ガチャ</button>
+        <input type="number" id="sampleCount" placeholder="ガチャ回数" min="1" value="1">
+    </form>
+    </div>
+    <div class="result-container" id="result">
+        <!-- 結果を表示する領域 -->
+    </div>
+
+    <script>
+        let inputCount = document.querySelectorAll('.input-group').length; // 現在の入力欄の数
+
+        function addInput() {
+            const inputContainer = document.getElementById('input-container');
+            const inputGroup = document.createElement('div');
+            inputGroup.classList.add('input-group');
+            inputGroup.innerHTML = `
+                <input type="number" placeholder="数値">
+                <input type="text" placeholder="文字列">
+            `;
+            inputContainer.appendChild(inputGroup);
+            inputCount++;
+        }
+
+        function normalizeAndSample() {
+            const pairs = [];
+            const numericInputs = document.querySelectorAll('input[type=number]');
+            const stringInputs = document.querySelectorAll('input[type=text]');
+
+            for (let i = 0; i < inputCount; i++) {
+                const numericInput = numericInputs[i];
+                const stringInput = stringInputs[i];
+                const numericValue = parseFloat(numericInput.value);
+                const stringValue = stringInput.value;
+
+                if (!isNaN(numericValue) && stringValue.trim() !== "") {
+                    pairs.push({ numeric: numericValue, string: stringValue });
+                }
+            }
+
+            if (pairs.length === 0) {
+                alert("少なくとも1つの有効なシンプルブラウザガチャを入力してください。");
+                return;
+            }
+
+            // 数値を正規化
+            const totalNumericValue = pairs.reduce((sum, pair) => sum + pair.numeric, 0);
+            const normalizedPairs = pairs.map(pair => ({ ...pair, normalizedNumeric: pair.numeric / totalNumericValue }));
+
+            // カテゴリカル分布からガチャ
+            const randomValue = Math.random();
+            let cumulativeProbability = 0;
+            let selectedPair = null;
+
+            for (const pair of normalizedPairs) {
+                cumulativeProbability += pair.normalizedNumeric;
+                if (randomValue <= cumulativeProbability) {
+                    selectedPair = pair;
+                    break;
+                }
+            }
+            return selectedPair.string
+        }
+        function exportCSV() {
+            const pairs = [];
+            const numericInputs = document.querySelectorAll('input[type=number]');
+            const stringInputs = document.querySelectorAll('input[type=text]');
+
+            for (let i = 0; i < inputCount; i++) {
+                const numericInput = numericInputs[i];
+                const stringInput = stringInputs[i];
+                const numericValue = parseFloat(numericInput.value);
+                const stringValue = stringInput.value;
+
+                if (!isNaN(numericValue) && stringValue.trim() !== "") {
+                    pairs.push({ numeric: numericValue, string: stringValue });
+                }
+            }
+
+            if (pairs.length === 0) {
+                alert("エクスポートするデータがありません。");
+                return;
+            }
+
+            // データをCSV形式に変換
+            const csvContent = pairs.map(pair => `${pair.numeric},${pair.string}`).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+
+            // ダウンロードリンクを作成
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pairs.csv';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function importCSV() {
+            const fileInput = document.getElementById('csvFileInput');
+            fileInput.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const csvData = event.target.result;
+                        const pairs = [];
+                        const lines = csvData.split('\n');
+                        for (const line of lines) {
+                            const [numeric, string] = line.split(',');
+                            const numericValue = parseFloat(numeric);
+                            if (!isNaN(numericValue) && string) {
+                                pairs.push({ numeric: numericValue, string });
+                            }
+                        }
+                        // ペアを読み込んだら、それを入力欄に反映
+                        inputCount = pairs.length;
+                        const inputContainer = document.getElementById('input-container');
+                        inputContainer.innerHTML = ''; // 既存の入力欄をクリア
+                        for (const pair of pairs) {
+                            const inputGroup = document.createElement('div');s
+                            inputGroup.classList.add('input-group');
+                            inputGroup.innerHTML = `
+                                <input type="number" value="${pair.numeric}" placeholder="数値">
+                                <input type="text" value="${pair.string}" placeholder="文字列">
+                            `;
+                            inputContainer.appendChild(inputGroup);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+            // ファイル選択ダイアログを開く
+            fileInput.click();
+        }
+        function sampleMultipleTimes() {
+            const sampleCountInput = document.getElementById('sampleCount');
+            const sampleCount = parseInt(sampleCountInput.value);
+            const results = {};
+            const resultTexts = [];
+
+            for (let i = 0; i < sampleCount; i++) {
+                const result = normalizeAndSample();
+                if (result) {
+                    if (results[result]) {
+                        results[result]++;
+                    } else {
+                        results[result] = 1;
+                    }
+                }
+            }
+            const sortedResults = Object.entries(results)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .reduce((sorted, [key, value]) => {
+                    sorted[key] = value;
+                    return sorted;
+                }, {});
+
+            for (const [key, value] of Object.entries(sortedResults)) {
+                resultTexts.push(`${key}: ${value}回`);
+            }
+
+            if (resultTexts.length > 0) {
+                document.getElementById('result').innerText = `ガチャ結果 (${sampleCount}回):\n${resultTexts.join('\n')}`;
+            } else {
+                alert("指定された回数分のガチャに失敗しました。");
+            }
+        }
+    </script>
+</body>
+</html>
