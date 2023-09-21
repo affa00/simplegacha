@@ -62,6 +62,21 @@
             color: #fff;
             border-radius: 4px;
         }
+        /* アニメーション用のスタイル */
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .sample-animation {
+            animation: rotate 0.3s linear infinite;
+            width: 50px;
+            height: 50px;
+            border: 4px solid transparent;
+            border-top: 4px solid #f00; /* 赤い線で円を描画 */
+            border-radius: 50%;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -106,9 +121,24 @@
     <div class="result-container" id="result">
         <!-- 結果を表示する領域 -->
     </div>
-
+    <audio id="buttonClickSound">
+        <source src="sound.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
     <script>
         let inputCount = document.querySelectorAll('.input-group').length; // 現在の入力欄の数
+
+        function playButtonClickSound() {
+            const audio = document.getElementById('buttonClickSound');
+            const resultContainer = document.getElementById('result');
+            resultContainer.classList.add('pulse-animation'); // アニメーションのクラスを追加
+            audio.play();
+
+            // 音声再生が終了したらアニメーションを停止
+            audio.addEventListener('ended', () => {
+                resultContainer.classList.remove('pulse-animation'); // アニメーションのクラスを削除
+            });
+        }
 
         function addInput() {
             const inputContainer = document.getElementById('input-container');
@@ -234,7 +264,8 @@
             // ファイル選択ダイアログを開く
             fileInput.click();
         }
-        function sampleMultipleTimes() {
+        function sampleMultipleTimes_() {
+            playButtonClickSound();
             const sampleCountInput = document.getElementById('sampleCount');
             const sampleCount = parseInt(sampleCountInput.value);
             const results = {};
@@ -266,6 +297,62 @@
             } else {
                 alert("指定された回数分のガチャに失敗しました。");
             }
+        }
+
+        function sampleMultipleTimes() {
+            const audio = document.getElementById('buttonClickSound');
+            const resultContainer = document.getElementById('result');
+            const animation = document.createElement('div');
+            animation.classList.add('sample-animation');
+            
+            // 音声再生が終了したらアニメーションを停止
+            audio.addEventListener('ended', () => {
+
+                // 1秒後にアニメーションと結果をクリアして表示
+                setTimeout(() => {
+                    resultContainer.removeChild(animation); // アニメーションを削除
+                    resultContainer.innerText = ''; // 空のテキストにクリア
+
+                    // 結果表示処理を実行
+                    const sampleCountInput = document.getElementById('sampleCount');
+                    const sampleCount = parseInt(sampleCountInput.value);
+                    const results = {};
+
+                    for (let i = 0; i < sampleCount; i++) {
+                        const result = normalizeAndSample();
+                        if (result) {
+                            if (results[result]) {
+                                results[result]++;
+                            } else {
+                                results[result] = 1;
+                            }
+                        }
+                    }
+
+                    const sortedResults = Object.entries(results)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .reduce((sorted, [key, value]) => {
+                            sorted[key] = value;
+                            return sorted;
+                        }, {});
+
+                    const resultTexts = [];
+
+                    for (const [key, value] of Object.entries(sortedResults)) {
+                        resultTexts.push(`${key}: ${value}回`);
+                    }
+
+                    if (resultTexts.length > 0) {
+                        resultContainer.innerText = `サンプリング結果 (${sampleCount}回):\n${resultTexts.join('\n')}`;
+                    } else {
+                        alert("指定された回数分のサンプリングに失敗しました。");
+                    }
+                }, 0); // 1秒待ってから結果表示処理を実行
+            });
+
+            audio.play(); // 音声再生開始
+            resultContainer.innerHTML = ''; // 既存の結果をクリア
+            resultContainer.appendChild(animation); // アニメーションを表示
         }
     </script>
 </body>
